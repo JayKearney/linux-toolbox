@@ -1,0 +1,18 @@
+name: Monthly certificate check
+
+on:
+  schedule:
+    - cron: '0 8 1 * *'      # 08:00 UTC on the 1st of each month
+  workflow_dispatch:          # also allows manual "Run workflow" button
+
+jobs:
+  check-certs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Run certificate checker
+        run: |
+          chmod +x scripts/check-certs.sh
+          ./scripts/check-certs.sh

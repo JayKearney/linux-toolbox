@@ -149,3 +149,44 @@ so it runs without a human. Typical patterns, simplest first:
   checks as a built-in synthetic test. This tool is the from-scratch version
   of that checkbox: the point of building it is owning every layer of what
   the checkbox does.
+
+
+## inspect-mac.sh — process, inode & deleted-file inspection
+
+A diagnostic tool with three modes: `process <pid>`, `inode <file>`, and
+`deleted`. Written for macOS (Darwin/BSD), which exposes process and file
+internals through tools (`ps`, `lsof`, `stat`) rather than a `/proc` filesystem.
+
+### Linux equivalent — the `/proc` filesystem
+
+On Linux, the same data lives in `/proc`, a *virtual* filesystem the kernel
+generates in memory (nothing on disk). Each running process has a folder
+`/proc/<pid>/` — the same source `ps` and `top` read:
+
+- `/proc/<pid>/stat` / `status` — process state and memory (e.g. `VmRSS`,
+  the resident RAM in use). macOS equivalent: `ps -o stat=,rss=`.
+- `/proc/<pid>/cmdline` — the launch command (arguments NUL-separated).
+- `/proc/<pid>/fd/` — one symlink per open file descriptor. macOS
+  equivalent: `lsof -p <pid>`.
+
+**Process states:** R running · S sleeping (healthy) · D/U uninterruptible I/O
+wait (can't be killed — often signals disk/network trouble) · Z zombie
+(exited, parent never reaped it) · T stopped.
+
+### Inodes
+
+An inode is the filesystem's metadata record for a file: inode number,
+permissions, owner, size, timestamps, link count, and pointers to the data
+blocks — **but not the filename**. The name lives in the directory, as a
+`name -> inode number` mapping. Consequences: renaming is instant (only the
+directory entry changes); hard links are multiple names sharing one inode;
+and `df -i` can show inode exhaustion even with free disk space.
+
+### The deleted-file trick
+
+Deleting a file only removes its directory entry. If a process still has the
+file open, its data blocks stay allocated until that descriptor closes — which
+is why `df` can still show a disk full after deleting a large log. The
+`deleted` mode finds these (`lsof | grep deleted` on macOS;
+`/proc/*/fd` entries marked `(deleted)` on Linux). Fix: restart the process
+holding it.
