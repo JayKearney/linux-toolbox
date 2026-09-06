@@ -23,6 +23,20 @@ days_until_expiry() {
   echo $(( (expiry_epoch - now_epoch) / 86400 ))
 }
 
+verify_hostname() {
+  local domain=$1
+  local result
+  result=$(echo | openssl s_client -servername "$domain" -connect "$domain":443 \
+    -verify_hostname "$domain" 2>/dev/null \
+    | grep "Verify return code")
+
+  if echo "$result" | grep -q "0 (ok)"; then
+    echo "ok"
+  else
+    echo "mismatch"
+  fi
+}
+
 while IFS= read -r domain || [[ -n "$domain" ]]; do
   [[ -z "$domain" || "$domain" == \#* ]] && continue
 
@@ -47,6 +61,13 @@ while IFS= read -r domain || [[ -n "$domain" ]]; do
   else
     echo "🟢 OK: $domain — $days_left days remaining"
   fi
+
+  # Hostname verification (independent of expiry)
+  if [[ "$(verify_hostname "$domain")" == "mismatch" ]]; then
+    echo "   ⚠️  $domain — certificate does NOT match hostname"
+    (( EXIT_CODE < 1 )) && EXIT_CODE=1
+  fi
 done < "$DOMAINS_FILE"
 
 exit $EXIT_CODE
+
