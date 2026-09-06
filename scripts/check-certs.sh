@@ -23,7 +23,7 @@ days_until_expiry() {
   echo $(( (expiry_epoch - now_epoch) / 86400 ))
 }
 
-while IFS= read -r domain; do
+while IFS= read -r domain || [[ -n "$domain" ]]; do
   [[ -z "$domain" || "$domain" == \#* ]] && continue
 
   expiry=$(get_expiry_date "$domain")

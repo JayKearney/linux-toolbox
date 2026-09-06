@@ -1,3 +1,8 @@
 github.com
-google.com
-example.com
+fifa.com
+ole.com.ar
+revenue.ie
+expired.badssl.com
+wrong.host.badssl.com
+argoproj.github.io
+swisscom.ch
